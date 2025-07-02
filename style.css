@@ -1,0 +1,633 @@
+:root {
+    /* Colores oscuros */
+    --background-color: #1a1a2e; /* Fondo principal oscuro */
+    --surface-color: #16213e; /* Fondo de paneles/tarjetas */
+    --text-color: #e0e0e0; /* Texto claro */
+    --primary-color: #00FFFF; /* Azul Gamer Brillante (Cyan) */
+    --primary-hover: #00CCCC; /* Azul más oscuro para hover */
+    --secondary-color: #0f3460; /* Azul oscuro secundario */
+    --border-color: #3f4e60; /* Borde sutil */
+    --ai-message-bg: #2b3a5a; /* Fondo mensaje AI */
+    --user-message-bg: #3c5478; /* Fondo mensaje usuario */
+    --shadow-color: rgba(0, 0, 0, 0.4);
+    --sidebar-bg: #111827; /* Fondo para el sidebar, aún más oscuro */
+    --project-item-hover: #2d3e52; /* Hover para ítems de proyecto */
+    --delete-button-color: #DC3545; /* Rojo para el botón de borrar */
+    --delete-button-hover: #C82333;
+
+    /* Colores para Scrollbar */ /* NUEVO */
+    --scrollbar-thumb-color: var(--primary-color); /* Pulgar de la barra de desplazamiento */
+    --scrollbar-track-color: #3f4e60; /* Pista de la barra de desplazamiento */
+    --scrollbar-thumb-hover-color: var(--primary-hover);
+}
+
+body {
+    font-family: 'Rajdhani', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--background-color);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    color: var(--text-color);
+    overflow-x: hidden;
+}
+
+.app-container {
+    background-color: var(--surface-color);
+    border-radius: 12px;
+    box-shadow: 0 8px 30px var(--shadow-color);
+    width: 98vw;
+    max-width: 1400px;
+    margin: 1vh auto;
+    display: flex;
+    flex-direction: column;
+    height: 98vh;
+    overflow: hidden;
+}
+
+/* --- Top Bar (Header) --- */
+.top-bar {
+    background-color: var(--secondary-color);
+    padding: 15px 25px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    border-bottom: 1px solid var(--border-color);
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.hamburger-menu {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    font-size: 1.8em;
+    cursor: pointer;
+    padding: 5px;
+    transition: color 0.3s ease;
+}
+
+.hamburger-menu:hover {
+    color: var(--primary-color);
+}
+
+.logo {
+    font-size: 1.8em;
+    font-weight: bold;
+    color: var(--primary-color);
+    text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+}
+
+.main-nav {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.nav-button {
+    background-color: var(--primary-color);
+    color: var(--background-color);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.95em;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.nav-button:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-2px);
+}
+
+.nav-button:disabled {
+    background-color: #555;
+    cursor: not-allowed;
+    opacity: 0.7;
+    transform: none;
+}
+
+.user-profile {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #6a1b9a;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    font-size: 1.1em;
+    cursor: pointer;
+    border: 2px solid var(--primary-color);
+}
+
+.user-profile.hidden,
+.nav-button.hidden {
+    display: none !important;
+}
+
+/* --- Main Content Layout --- */
+.main-content {
+    display: flex;
+    flex-grow: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+/* --- Sidebar --- */
+.sidebar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 280px;
+    background-color: var(--sidebar-bg);
+    border-right: 1px solid var(--border-color);
+    padding: 20px;
+    box-shadow: 4px 0 15px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar.visible {
+    transform: translateX(0);
+}
+
+.new-project-button {
+    background-color: var(--primary-color);
+    color: var(--background-color);
+    border: none;
+    padding: 15px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    margin-bottom: 25px;
+}
+
+.new-project-button:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-2px);
+}
+
+.new-project-button span { /* Eliminar esto para quitar la cruz */
+    /* display: none; */ /* Opcional: si el span aún existe y causa problemas */
+    /* font-size: 1.5em; */
+    /* line-height: 1; */
+}
+
+
+.projects-list {
+    flex-grow: 1;
+    overflow-y: auto;
+    /* Estilo de scrollbar para la lista de proyectos */ /* NUEVO */
+    &::-webkit-scrollbar {
+        width: 8px;
+    }
+    &::-webkit-scrollbar-track {
+        background: var(--scrollbar-track-color);
+        border-radius: 10px;
+    }
+    &::-webkit-scrollbar-thumb {
+        background: var(--scrollbar-thumb-color);
+        border-radius: 10px;
+    }
+    &::-webkit-scrollbar-thumb:hover {
+        background: var(--scrollbar-thumb-hover-color);
+    }
+}
+
+.projects-list h3 {
+    color: var(--primary-color);
+    margin-top: 0;
+    margin-bottom: 15px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 1.2em;
+}
+
+.projects-list ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.project-item {
+    padding: 12px 15px;
+    margin-bottom: 8px;
+    background-color: var(--surface-color);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.project-item:hover {
+    background-color: var(--project-item-hover);
+    color: var(--primary-color);
+}
+
+.project-item.active {
+    background-color: var(--primary-color);
+    color: var(--background-color);
+    font-weight: bold;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+.project-item.active:hover {
+    background-color: var(--primary-color);
+    color: var(--background-color);
+}
+
+.project-item span {
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.project-actions {
+    display: flex;
+    gap: 5px;
+}
+
+/* Estilo para los botones de editar y borrar nombre del proyecto */
+.edit-project-name, .delete-project {
+    background: none;
+    border: none;
+    color: black; /* NUEVO: Emojis negros */
+    cursor: pointer;
+    font-size: 1.1em;
+    padding: 5px;
+    border-radius: 5px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    line-height: 1;
+    text-shadow: none; /* Asegurar que no haya sombra de texto del color primario */
+}
+
+.edit-project-name:hover {
+    background-color: rgba(0, 255, 255, 0.1);
+    color: var(--primary-color); /* El texto del emoji se vuelve azul en hover */
+}
+
+.delete-project:hover {
+    background-color: rgba(220, 53, 69, 0.1);
+    color: var(--delete-button-color);
+}
+
+
+/* --- Chat Column --- */
+.chat-column {
+    flex: 3;
+    display: flex;
+    flex-direction: column;
+    padding: 25px;
+    border-right: 1px solid var(--border-color);
+    box-sizing: border-box;
+}
+
+.messages {
+    flex-grow: 1;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    padding-right: 15px;
+    display: flex;
+    flex-direction: column;
+
+    /* Estilo de scrollbar para mensajes */ /* NUEVO */
+    &::-webkit-scrollbar {
+        width: 8px;
+    }
+    &::-webkit-scrollbar-track {
+        background: var(--scrollbar-track-color);
+        border-radius: 10px;
+    }
+    &::-webkit-scrollbar-thumb {
+        background: var(--scrollbar-thumb-color);
+        border-radius: 10px;
+    }
+    &::-webkit-scrollbar-thumb:hover {
+        background: var(--scrollbar-thumb-hover-color);
+    }
+}
+
+/* Estilo de scrollbar para el textarea del usuario */ /* NUEVO */
+#user-input {
+    /* ... otros estilos ... */
+    &::-webkit-scrollbar {
+        width: 8px;
+    }
+    &::-webkit-scrollbar-track {
+        background: var(--scrollbar-track-color);
+        border-radius: 10px;
+    }
+    &::-webkit-scrollbar-thumb {
+        background: var(--scrollbar-thumb-color);
+        border-radius: 10px;
+    }
+    &::-webkit-scrollbar-thumb:hover {
+        background: var(--scrollbar-thumb-hover-color);
+    }
+}
+
+
+.message {
+    margin-bottom: 12px;
+    padding: 12px 18px;
+    border-radius: 20px;
+    line-height: 1.6;
+    max-width: 80%;
+    word-wrap: break-word;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.ai-message {
+    background-color: var(--ai-message-bg);
+    align-self: flex-start;
+    margin-right: auto;
+    border-bottom-left-radius: 4px;
+    color: var(--text-color);
+}
+
+.user-message {
+    background-color: var(--user-message-bg);
+    align-self: flex-end;
+    margin-left: auto;
+    border-bottom-right-radius: 4px;
+    color: var(--text-color);
+}
+
+.input-area {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    align-items: flex-end;
+}
+
+#user-input {
+    flex-grow: 1;
+    padding: 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 25px;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    font-size: 1.05em;
+    resize: vertical;
+    min-height: 50px;
+    max-height: 150px;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+#user-input::placeholder {
+    color: #888;
+}
+
+#user-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 255, 255, 0.3); /* Sombra en azul */
+}
+
+#send-button {
+    background-color: var(--primary-color);
+    color: var(--background-color);
+    border: none;
+    padding: 14px 25px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 1.05em;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+#send-button:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-2px);
+}
+
+#send-button:active {
+    transform: translateY(0);
+}
+
+
+/* --- Structure Suggestions Modal --- */
+.structure-suggestions-modal {
+    flex: 2;
+    background-color: var(--surface-color);
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow-y: auto;
+    box-sizing: border-box;
+
+    /* Estilo de scrollbar para el modal de estructuras */ /* NUEVO */
+    &::-webkit-scrollbar {
+        width: 8px;
+    }
+    &::-webkit-scrollbar-track {
+        background: var(--scrollbar-track-color);
+        border-radius: 10px;
+    }
+    &::-webkit-scrollbar-thumb {
+        background: var(--scrollbar-thumb-color);
+        border-radius: 10px;
+    }
+    &::-webkit-scrollbar-thumb:hover {
+        background: var(--scrollbar-thumb-hover-color);
+    }
+}
+
+.structure-suggestions-modal.hidden {
+    display: none;
+}
+
+.structure-suggestions-modal h2 {
+    color: var(--primary-color);
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 1.8em;
+}
+
+.image-suggestions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    justify-content: center;
+    padding: 10px;
+}
+
+.image-option {
+    background-color: var(--background-color);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    border: 2px solid transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-bottom: 15px;
+}
+
+.image-option:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+    border-color: var(--primary-color);
+}
+
+.image-option img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.image-option p {
+    color: var(--text-color);
+    font-weight: bold;
+    text-align: center;
+    padding: 0 10px;
+    margin: 0;
+}
+
+.close-modal {
+    background-color: var(--delete-button-color);
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 1em;
+    margin-top: 20px;
+    align-self: center;
+    transition: background-color 0.3s ease;
+}
+
+.close-modal:hover {
+    background-color: var(--delete-button-hover);
+}
+
+
+/* --- Media Queries para Responsividad --- */
+@media (max-width: 992px) {
+    .app-container {
+        flex-direction: column;
+        height: auto;
+        min-height: 100vh;
+        margin: 0;
+        width: 100vw;
+        border-radius: 0;
+    }
+    .top-bar {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+        padding: 15px;
+        border-radius: 0;
+    }
+    .header-left, .main-nav {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .main-content {
+        flex-direction: column;
+    }
+
+    .chat-column {
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        padding: 20px;
+    }
+
+    .structure-suggestions-modal {
+        padding: 20px;
+    }
+
+    .image-suggestions {
+        grid-template-columns: 1fr;
+    }
+
+    .sidebar {
+        width: 100%;
+        height: auto;
+        max-height: calc(100vh - 70px);
+        position: fixed;
+        top: 70px;
+        left: 0;
+        border-right: none;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        padding-bottom: 20px;
+        border-radius: 0 0 12px 12px;
+        transform: translateY(-100%);
+        transition: transform 0.3s ease-in-out;
+        overflow-y: auto;
+    }
+    .sidebar.visible {
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 600px) {
+    .top-bar {
+        padding: 10px;
+    }
+    .logo {
+        font-size: 1.5em;
+    }
+    .hamburger-menu {
+        font-size: 1.5em;
+    }
+    .nav-button {
+        padding: 8px 15px;
+        font-size: 0.85em;
+    }
+    .user-profile {
+        width: 35px;
+        height: 35px;
+        font-size: 1em;
+    }
+    .chat-column, .structure-suggestions-modal {
+        padding: 15px;
+    }
+    .message {
+        padding: 10px 15px;
+        font-size: 0.9em;
+    }
+    #user-input {
+        min-height: 40px;
+        font-size: 0.9em;
+        padding: 10px;
+    }
+    #send-button {
+        padding: 10px 18px;
+        font-size: 0.9em;
+    }
+    .sidebar {
+        top: 60px;
+    }
+}

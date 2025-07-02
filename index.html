@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebCrafter AI - Tu Guía de Desarrollo Web</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="top-bar">
+            <div class="header-left">
+                <button class="hamburger-menu" id="hamburger-menu">☰</button>
+                <div class="logo">WebCrafter AI</div>
+            </div>
+            <nav class="main-nav">
+                <button class="nav-button">Planes</button>
+                <button class="nav-button" id="login-button">Iniciar Sesión</button>
+                <button class="nav-button" id="register-button">Registrarse</button>
+                <div class="user-profile hidden" id="user-profile">
+                    <span>JP</span>
+                </div>
+            </nav>
+        </header>
+
+        <aside class="sidebar hidden" id="sidebar">
+            <button class="new-project-button" id="new-project-button">
+                Iniciar Nuevo Proyecto
+            </button>
+            <div class="projects-list">
+                <h3>Mis Proyectos</h3>
+                <ul id="project-list-items">
+                    <li class="project-item active" data-project-id="current">
+                        <span>Proyecto Actual</span>
+                        <div class="project-actions">
+                            <button class="edit-project-name" title="Renombrar proyecto">&#x270E;</button>
+                            <button class="delete-project" title="Eliminar proyecto">&#x1F5D1;</button>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <div class="chat-column">
+                <div id="messages" class="messages">
+                    <div class="message ai-message">
+                        <p>¡Hola! Soy WebCrafter AI, tu guía experto en desarrollo web. ¿En qué tipo de sitio web estás pensando hoy?</p>
+                    </div>
+                </div>
+                <div class="input-area">
+                    <textarea id="user-input" placeholder="Escribe tu mensaje aquí..." rows="3"></textarea>
+                    <button id="send-button">Enviar</button>
+                </div>
+            </div>
+
+            <div class="structure-suggestions-modal hidden" id="structure-modal">
+                <h2>Sugerencias de Estructuras Web</h2>
+                <div id="image-suggestions" class="image-suggestions">
+                    <div class="image-option" data-structure-id="1">
+                        <img src="https://via.placeholder.com/280x200/00FFFF/1a1a2e?text=Estructura+A" alt="Sugerencia de estructura A">
+                        <p>Estructura Clásica</p>
+                    </div>
+                    <div class="image-option" data-structure-id="2">
+                        <img src="https://via.placeholder.com/280x200/00FFFF/1a1a2e?text=Estructura+B" alt="Sugerencia de estructura B">
+                        <p>Estructura Moderna</p>
+                    </div>
+                    <div class="image-option" data-structure-id="3">
+                        <img src="https://via.placeholder.com/280x200/00FFFF/1a1a2e?text=Estructura+C" alt="Sugerencia de estructura C">
+                        <p>Estructura Minimalista</p>
+                    </div>
+                </div>
+                <button class="close-modal" id="close-modal">Cerrar Sugerencias</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
