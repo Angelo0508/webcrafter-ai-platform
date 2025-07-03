@@ -266,37 +266,70 @@ document.addEventListener('DOMContentLoaded', () => {
         structureModal.classList.add('hidden');
     });
 
-    // Función para enviar mensaje a Automa (placeholder por ahora)
-    async function sendMessageToAutoma(message) {
+    // ***************************************************************
+    // ** INICIO DE LA FUNCIÓN ACTUALIZADA A sendMessageToAI **
+    // ***************************************************************
+    async function sendMessageToAI(message) {
         addMessage(message, 'user');
-        userInput.value = '';
+        userInput.value = ''; // Limpiar el input inmediatamente
+
+        // Mostrar un mensaje de "escribiendo" o un indicador de carga
+        const loadingMessageDiv = document.createElement('div');
+        loadingMessageDiv.classList.add('message', 'ai-message', 'loading-message');
+        loadingMessageDiv.innerHTML = `<p>WebCrafter AI está pensando...</p>`;
+        messagesContainer.appendChild(loadingMessageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
         try {
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            // La URL de tu Netlify Function. Usamos /api/ para la redirección configurada en netlify.toml
+            const NETLIFY_FUNCTION_URL = '/api/gemini_ai'; 
 
-            const aiResponseText = `Entendido. Para el tipo de sitio web que mencionas, aquí tienes algunas sugerencias de estructuras visuales. Por favor, selecciona la que más te guste haciendo clic en ella.`;
-            addMessage(aiResponseText, 'ai');
+            const response = await fetch(NETLIFY_FUNCTION_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message: message }) // Envía el mensaje del usuario con la clave 'message'
+            });
 
-            // Actualizadas URLs de imágenes para reflejar el nuevo color primario
-            const simulatedImageUrls = [
-                'https://via.placeholder.com/280x200/00FFFF/1a1a2e?text=Estructura+1', // Fondo azul brillante, texto oscuro
-                'https://via.placeholder.com/280x200/0f3460/00FFFF?text=Estructura+2', // Fondo azul secundario, texto azul brillante
-                'https://via.placeholder.com/280x200/1a1a2e/00FFFF?text=Estructura+3'  // Fondo oscuro, texto azul brillante
-            ];
-            addImageSuggestions(simulatedImageUrls);
-            
+            if (!response.ok) {
+                // Leer el mensaje de error del cuerpo de la respuesta si está disponible
+                const errorBody = await response.json().catch(() => ({ message: 'Unknown error' }));
+                throw new Error(`Error HTTP: ${response.status} - ${errorBody.message || 'Server error'}`);
+            }
+
+            const data = await response.json();
+
+            // Eliminar el mensaje de carga
+            loadingMessageDiv.remove();
+
+            // Usar la respuesta real de la IA
+            addMessage(data.aiText, 'ai');
+
+            // Por ahora, imagesUrls estará vacío o null, pero lo tendremos listo para el siguiente paso
+            if (data.imageUrls && data.imageUrls.length > 0) {
+                addImageSuggestions(data.imageUrls);
+            } else {
+                structureModal.classList.add('hidden'); // Ocultar el modal si no hay imágenes
+            }
+
         } catch (error) {
-            console.error("Error al comunicarse con Automa:", error);
-            addMessage("Lo siento, hubo un error al procesar tu solicitud. Por favor, inténtalo de nuevo.", 'ai');
-            structureModal.classList.add('hidden');
+            console.error("Error al comunicarse con la IA:", error);
+            loadingMessageDiv.remove(); // Asegurarse de quitar el mensaje de carga
+            addMessage(`Lo siento, hubo un error al procesar tu solicitud: ${error.message}. Por favor, inténtalo de nuevo.`, 'ai');
+            structureModal.classList.add('hidden'); // Asegurarse de ocultar el modal si hubo un error
         }
     }
+    // ***************************************************************
+    // ** FIN DE LA FUNCIÓN ACTUALIZADA A sendMessageToAI **
+    // ***************************************************************
+
 
     // Event Listeners para el chat
     sendButton.addEventListener('click', () => {
         const message = userInput.value.trim();
         if (message) {
-            sendMessageToAutoma(message);
+            sendMessageToAI(message); // Cambia de sendMessageToAutoma a sendMessageToAI
         }
     });
 
