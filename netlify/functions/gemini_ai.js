@@ -8,6 +8,11 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 // ¡NO PONGAS LA CLAVE DIRECTAMENTE AQUÍ EN CÓDIGO DE PRODUCCIÓN!
 const API_KEY = process.env.GEMINI_API_KEY; 
 
+// Inicializar GoogleGenerativeAI con la clave API y especificando la versión de la API
+const genAI = new GoogleGenerativeAI(API_KEY, {
+    apiVersion: 'v1', // <--- ¡Esta es la modificación clave!
+});
+
 exports.handler = async (event) => {
     // Solo respondemos a peticiones POST
     if (event.httpMethod !== 'POST') {
@@ -36,7 +41,6 @@ exports.handler = async (event) => {
             };
         }
 
-        const genAI = new GoogleGenerativeAI(API_KEY);
         // Seleccionar el modelo Gemini Pro para la generación de texto
         const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
@@ -67,7 +71,7 @@ exports.handler = async (event) => {
                 'Access-Control-Allow-Methods': 'POST, OPTIONS',
                 'Access-Control-Allow-Headers': 'Content-Type',
             },
-            body: JSON.stringify({ message: 'Error procesando la solicitud en el servidor', error: error.message }),
+            body: JSON.stringify({ message: 'Error procesando la solicitud en el servidor', details: error.message }),
         };
     }
 };
