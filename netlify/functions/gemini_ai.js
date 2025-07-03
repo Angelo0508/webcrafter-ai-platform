@@ -10,7 +10,7 @@ const API_KEY = process.env.GEMINI_API_KEY;
 
 // Inicializar GoogleGenerativeAI con la clave API y especificando la versión de la API
 const genAI = new GoogleGenerativeAI(API_KEY, {
-    apiVersion: 'v1', // <--- ¡Esta es la modificación clave!
+    apiVersion: 'v1', // Mantén esta línea para usar la versión estable v1
 });
 
 exports.handler = async (event) => {
@@ -41,8 +41,9 @@ exports.handler = async (event) => {
             };
         }
 
-        // Seleccionar el modelo Gemini Pro para la generación de texto
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        // CAMBIO CLAVE: Seleccionar el modelo "gemini-1.0-pro" para la generación de texto
+        // Esto se hace para intentar resolver el error 404 Not Found con "gemini-pro"
+        const model = genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
 
         // Generar contenido con Gemini
         const result = await model.generateContent(message);
