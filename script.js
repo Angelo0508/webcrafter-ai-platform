@@ -153,7 +153,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Event listeners para los botones de autenticación (simulados)
     loginButton.addEventListener('click', () => {
-        alert('Simulando inicio de sesión...');
+        // Reemplazar alert con un modal personalizado si es para producción
+        alert('Simulando inicio de sesión...'); 
         isLoggedIn = true;
         updateAuthButtons();
         structureModal.classList.add('hidden');
@@ -161,6 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     registerButton.addEventListener('click', () => {
+        // Reemplazar alert con un modal personalizado si es para producción
         alert('Simulando registro...');
         isLoggedIn = true;
         updateAuthButtons();
@@ -169,6 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     userProfile.addEventListener('click', () => {
+        // Reemplazar alert con un modal personalizado si es para producción
         alert('Simulando menú de perfil. ¿Cerrar sesión?');
         isLoggedIn = false;
         updateAuthButtons();
@@ -221,7 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
         messageDiv.classList.add('message', `${sender}-message`);
         messageDiv.innerHTML = `<p>${text}</p>`;
         messagesContainer.appendChild(messageDiv);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        messagesContainer.scrollTop = messagesContainer.scrollTop; // Mantener el scroll al final
 
         if (save) {
             projects[currentProjectId].messages.push({ text, sender });
@@ -250,6 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 imageOptionDiv.addEventListener('click', () => {
                     const selectedId = imageOptionDiv.dataset.structureId;
+                    // Reemplazar alert con un modal personalizado si es para producción
                     alert(`¡Has seleccionado la Estructura Opción ${selectedId}!`);
                     addMessage(`He seleccionado la Estructura Opción ${selectedId}. ¡Me encanta!`, 'user');
                     structureModal.classList.add('hidden');
@@ -282,14 +286,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // La URL de tu Netlify Function. Usamos /api/ para la redirección configurada en netlify.toml
+            // IMPORTANTE: Para desarrollo local, necesitas usar `netlify dev` en tu terminal.
+            // Si estás usando un servidor local simple (como Live Server), esta ruta no funcionará
+            // porque el servidor local no sabe cómo manejar las funciones de Netlify.
             const NETLIFY_FUNCTION_URL = '/api/gemini_ai'; 
+
+            // La clave API de Gemini proporcionada por el usuario
+            const GEMINI_API_KEY = 'AIzaSyDA5poq8otS3VKwaNivOG0hoDyygsFS0Jo'; // **AQUÍ SE USA LA CLAVE API**
 
             const response = await fetch(NETLIFY_FUNCTION_URL, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ message: message }) // Envía el mensaje del usuario con la clave 'message'
+                body: JSON.stringify({ 
+                    message: message,
+                    apiKey: GEMINI_API_KEY // Envía la clave API junto con el mensaje
+                }) 
             });
 
             if (!response.ok) {
