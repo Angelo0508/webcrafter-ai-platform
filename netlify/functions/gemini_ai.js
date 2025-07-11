@@ -1,20 +1,11 @@
 // netlify/functions/gemini_ai.js
 
-// Importar la librería de Google Generative AI para Node.js
-// Necesitaremos instalarla con 'npm install @google/generative-ai'
+// Importa las clases necesarias del SDK de Google Generative AI
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// Acceder a la clave API de forma segura desde las variables de entorno de Netlify
-// ¡NO PONGAS LA CLAVE DIRECTAMENTE AQUÍ EN CÓDIGO DE PRODUCCIÓN!
-const API_KEY = process.env.GEMINI_API_KEY; 
-
-// Inicializar GoogleGenerativeAI con la clave API y especificando la versión de la API
-const genAI = new GoogleGenerativeAI(API_KEY, {
-    apiVersion: 'v1', // Mantén esta línea para usar la versión estable v1
-});
-
-exports.handler = async (event) => {
-    // Solo respondemos a peticiones POST
+// Exporta la función handler que Netlify ejecutará
+exports.handler = async (event, context) => {
+    // Asegúrate de que la solicitud sea POST
     if (event.httpMethod !== 'POST') {
         return {
             statusCode: 405,
@@ -22,48 +13,59 @@ exports.handler = async (event) => {
         };
     }
 
-    // Asegúrate de que la clave API esté configurada
-    if (!API_KEY) {
-        console.error("Error: GEMINI_API_KEY no está configurada como variable de entorno.");
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ message: 'Server configuration error: API Key missing.' }),
-        };
-    }
-
     try {
-        const { message } = JSON.parse(event.body); // Obtener el mensaje del usuario
+        // Parsea el cuerpo de la solicitud (que viene como JSON)
+        // Ahora obtenemos tanto el mensaje como la clave API del cuerpo
+        const { message, apiKey } = JSON.parse(event.body);
 
-        if (!message) {
+        // Verifica si la clave API y el mensaje existen
+        if (!apiKey || !message) {
             return {
                 statusCode: 400,
-                body: JSON.stringify({ message: 'Missing message in request body' }),
+                body: JSON.stringify({ message: 'Missing API Key or message in request body' }),
             };
         }
 
-        // CAMBIO CLAVE: Seleccionar el modelo "gemini-1.0-pro" para la generación de texto
-        // Esto se hace para intentar resolver el error 404 Not Found con "gemini-pro"
-        const model = genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
+        // Inicializa el modelo de Gemini con la clave API recibida del frontend
+        const genAI = new GoogleGenerativeAI(apiKey);
 
-        // Generar contenido con Gemini
-        const result = await model.generateContent(message);
+        // Selecciona el modelo 'gemini-2.0-flash'
+        // Este modelo es más reciente y compatible con la API v1beta
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+        // Inicia el chat (opcional, puedes usar generateContent directamente si no necesitas historial)
+        const chat = model.startChat({
+            history: [
+                // Puedes pre-cargar un historial aquí si lo necesitas
+            ],
+            generationConfig: {
+                maxOutputTokens: 500, // Limita la longitud de la respuesta para evitar respuestas muy largas
+            },
+        });
+
+        // Envía el mensaje del usuario a la IA
+        const result = await chat.sendMessage(message);
         const response = await result.response;
-        const text = response.text(); // Obtener el texto de la respuesta
+        const aiText = response.text();
 
-        // Devolver la respuesta al frontend
+        // Por ahora, imageUrls estará vacío, pero puedes añadir lógica para generarlas aquí
+        const imageUrls = []; 
+
+        // Devuelve la respuesta de la IA y las URLs de imágenes
         return {
             statusCode: 200,
             headers: {
                 'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*', // Permite peticiones desde cualquier origen (CORS)
+                // Permite peticiones desde cualquier origen (CORS) - considera restringir esto en producción
+                'Access-Control-Allow-Origin': '*', 
                 'Access-Control-Allow-Methods': 'POST, OPTIONS',
                 'Access-Control-Allow-Headers': 'Content-Type',
             },
-            body: JSON.stringify({ aiText: text, imageUrls: [] }), // Por ahora, imageUrls vacío
+            body: JSON.stringify({ aiText, imageUrls }),
         };
 
     } catch (error) {
-        console.error('Error llamando a la API de Gemini:', error);
+        console.error("Error en la función de Netlify:", error);
         return {
             statusCode: 500,
             headers: {
@@ -72,7 +74,7 @@ exports.handler = async (event) => {
                 'Access-Control-Allow-Methods': 'POST, OPTIONS',
                 'Access-Control-Allow-Headers': 'Content-Type',
             },
-            body: JSON.stringify({ message: 'Error procesando la solicitud en el servidor', details: error.message }),
+            body: JSON.stringify({ message: `Error procesando la solicitud en el servidor: ${error.message}` }),
         };
     }
 };
