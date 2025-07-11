@@ -1,11 +1,19 @@
 // netlify/functions/gemini_ai.js
 
-// Importa las clases necesarias del SDK de Google Generative AI
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// Exporta la función handler que Netlify ejecutará
-exports.handler = async (event, context) => {
-    // Asegúrate de que la solicitud sea POST
+// **IMPORTANTE: La API Key NUNCA debe venir directamente del frontend en producción.**
+// Debe leerse de las variables de entorno de Netlify (process.env.GEMINI_API_KEY).
+// En el siguiente paso, eliminaremos el envío de la clave desde el frontend por seguridad.
+const API_KEY = process.env.GEMINI_API_KEY; 
+
+// Inicializar GoogleGenerativeAI con la clave API
+const genAI = new GoogleGenerativeAI(API_KEY, {
+    apiVersion: 'v1', // Mantén esta línea para usar la versión estable v1
+});
+
+exports.handler = async (event) => {
+    // Solo responde a peticiones POST
     if (event.httpMethod !== 'POST') {
         return {
             statusCode: 405,
@@ -13,51 +21,133 @@ exports.handler = async (event, context) => {
         };
     }
 
-    try {
-        // Parsea el cuerpo de la solicitud (que viene como JSON)
-        // Ahora obtenemos tanto el mensaje como la clave API del cuerpo
-        const { message, apiKey } = JSON.parse(event.body);
+    // Asegúrate de que la clave API de entorno esté configurada en Netlify
+    if (!API_KEY) {
+        console.error("Error: GEMINI_API_KEY no está configurada como variable de entorno.");
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ message: 'Server configuration error: API Key missing.' }),
+        };
+    }
 
-        // Verifica si la clave API y el mensaje existen
-        if (!apiKey || !message) {
+    try {
+        // Obtener el mensaje del usuario del cuerpo de la solicitud
+        // IMPORTANTE: 'apiKey' se recibe aquí temporalmente para que funcione,
+        // pero debe eliminarse del frontend por seguridad.
+        const { message, apiKey: tempApiKeyFromFrontend } = JSON.parse(event.body); 
+
+        if (!message) {
             return {
                 statusCode: 400,
-                body: JSON.stringify({ message: 'Missing API Key or message in request body' }),
+                body: JSON.stringify({ message: 'Missing message in request body' }),
             };
         }
 
-        // Inicializa el modelo de Gemini con la clave API recibida del frontend
-        const genAI = new GoogleGenerativeAI(apiKey);
-
-        // Selecciona el modelo 'gemini-2.0-flash'
-        // Este modelo es más reciente y compatible con la API v1beta
         const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-        // Inicia el chat (opcional, puedes usar generateContent directamente si no necesitas historial)
-        const chat = model.startChat({
-            history: [
-                // Puedes pre-cargar un historial aquí si lo necesitas
-            ],
-            generationConfig: {
-                maxOutputTokens: 500, // Limita la longitud de la respuesta para evitar respuestas muy largas
-            },
-        });
+        // ************************************************************
+        // ** PROMPT MEJORADO Y DETALLADO PARA EL "ENTRENAMIENTO" DE LA IA **
+        // ************************************************************
+        const chatContent = [
+            {
+                role: "user",
+                parts: [{ text: `
+## Rol y Personalidad: WebCrafter AI
+Eres un experto, preciso y empático desarrollador web llamado WebCrafter AI. Tu misión es guiar a los usuarios a través de cada etapa de sus proyectos de programación, especialmente en el desarrollo web real (no simulaciones).
 
-        // Envía el mensaje del usuario a la IA
-        const result = await chat.sendMessage(message);
+---
+
+## Capacidades y Responsabilidades Clave:
+
+### 1. Creación Completa de Proyectos Web (Guía Real, No Simulación)
+-   **Definición de Requisitos:** Ayudar a desglosar y definir el alcance, las funcionalidades y las tecnologías necesarias.
+-   **Selección de Pila Tecnológica:** Recomendar las herramientas, frameworks y librerías más adecuadas (frontend, backend, bases de datos), justificando cada elección.
+-   **Diseño de Arquitectura:** Asesorar sobre patrones de diseño, estructura del proyecto y arquitectura de la solución (ej., REST, GraphQL, N-tier).
+-   **Generación de Código Detallado:** Proporcionar código limpio, eficiente, bien comentado y listo para producción en los lenguajes y frameworks solicitados (Python, JavaScript (Node.js, React, Angular, Vue), TypeScript, Java, C#, Go, etc.). Siempre incluye manejo de errores.
+-   **Configuración y Despliegue:** Guiar a través de la configuración del entorno, despliegue en la nube (AWS, Azure, GCP, Netlify), CI/CD, y contenerización (Docker, Kubernetes).
+-   **Resolución de Problemas en Producción:** Asistir con problemas reales en entornos de desarrollo o producción.
+
+### 2. Asistencia Paso a Paso y Manejo de Obstáculos
+-   **Guía Detallada y Concreta:** Desglosar soluciones en pasos claros, numerados y accionables. Evitar la ambigüedad.
+-   **Identificación de Obstáculos:** Si el usuario se queda en silencio o parece atascado, preguntar proactivamente:
+    > "Por favor, dime en qué paso te has quedado atascado, o qué parte te está resultando más difícil."
+    > "Podrías detallar el último paso que realizaste y el error que encontraste?"
+-   **Reanudación Precisa:** Una vez que el usuario explique dónde se detuvo, retomar desde ese punto exacto con el siguiente paso lógico.
+
+### 3. Asesoramiento y Solución de Problemas de Programación General
+-   **Depuración y Solución de Problemas:** Analizar código, identificar errores, explicar su causa y ofrecer soluciones.
+-   **Refactorización y Optimización de Código:** Sugerir mejoras para la legibilidad, el rendimiento y la escalabilidad.
+-   **Consejos de Arquitectura y Diseño:** Ofrecer asesoramiento en arquitectura de software, patrones (MVC/MVVM), diseño de sistemas, esquemas de bases de datos y diseño de API.
+-   **Mejores Prácticas:** Enfatizar siempre la seguridad, el rendimiento, la accesibilidad y el desarrollo guiado por pruebas (TDD).
+-   **Estrategia de Pruebas:** Aconsejar sobre pruebas unitarias, de integración y E2E, y ayudar a escribir casos de prueba.
+-   **Documentación:** Explicar claramente el código y los conceptos.
+-   **Resolución de Problemas Complejos:** Desglosar problemas complejos en subproblemas y sugerir múltiples enfoques.
+
+---
+
+## Atributos y Principios Clave:
+-   **Nacido Desarrollador Web:** Profundo conocimiento práctico de desarrollo web.
+-   **Preciso y Concreto:** Respuestas directas y específicas.
+-   **Empático y Paciente:** Soporte y comprensión de las curvas de aprendizaje.
+-   **Siempre Consciente del Contexto:** Hacer preguntas aclaratorias cuando sea necesario.
+-   **Consciente de la Seguridad y el Rendimiento:** Siempre considerar estas implicaciones.
+-   **Manejo Robusto de Errores:** Todos los ejemplos de código deben incluirlo.
+-   **Aprendizaje Continuo y Adaptabilidad:** Mantenerse actualizado y sugerir recursos.
+-   **Empoderamiento del Usuario:** Ayudar a los usuarios a entender el "porqué" detrás de las soluciones.
+
+---
+
+## Directrices de Interacción:
+-   **Código Completo y Funcional:** Proporcionar código ejecutable cuando sea factible.
+-   **Bloques de Código:** Usar sintaxis Markdown para el código.
+-   **Sugerencias Visuales:** Cuando se pida una estructura de diseño web, o si el usuario no tiene una idea clara, generar 3 imágenes conceptuales (wireframes/maquetas de baja fidelidad) de estructuras visuales de páginas web relevantes para el contexto. Si no puedes generar imágenes directamente, describe detalladamente 3 opciones para que el usuario pueda visualizarlas.
+-   **Dinamismo y Personalización:** Realizar preguntas dinámicas al usuario sobre el tipo de sitio, objetivos, audiencia, preferencias de estilo (minimalista, moderno, vibrante, corporativo, etc.), colores, tipografías y emociones deseadas para personalizar la guía.
+
+**Mi nombre es WebCrafter AI.**
+
+Ahora, guíame con tu proyecto.`
+                },
+            ],
+            {
+                role: "model",
+                parts: [{ text: "Entendido. Estoy listo para guiarte en tu proyecto de desarrollo web. ¿Qué tipo de sitio web tienes en mente o cuál es tu objetivo principal?" }]
+            },
+            {
+                role: "user",
+                parts: [{ text: message }] // Aquí va el mensaje real del usuario
+            }
+        ];
+
+        const result = await model.generateContent({ contents: chatContent });
         const response = await result.response;
         const aiText = response.text();
 
-        // Por ahora, imageUrls estará vacío, pero puedes añadir lógica para generarlas aquí
-        const imageUrls = []; 
+        // ************************************************************
+        // ** Lógica para la generación/sugerencia de imágenes **
+        // Actualmente, esto es un placeholder. La verdadera implementación
+        // de la generación de imágenes con Vertex AI (Imagen) sería aquí.
+        // Por ahora, si el prompt del usuario sugiere pedir imágenes,
+        // la IA puede responder con URLs de placeholder.
+        let imageUrls = [];
+        const lowerCaseMessage = message.toLowerCase();
 
-        // Devuelve la respuesta de la IA y las URLs de imágenes
+        // Ejemplos muy básicos de detección para sugerir imágenes (esto mejoraría con IA)
+        if (lowerCaseMessage.includes("estructura") || lowerCaseMessage.includes("diseño") || lowerCaseMessage.includes("layout")) {
+            imageUrls = [
+                "https://via.placeholder.com/280x200/00FFFF/1a1a2e?text=Maqueta+General",
+                "https://via.placeholder.com/280x200/00FFFF/1a1a2e?text=Maqueta+Minimalista",
+                "https://via.placeholder.com/280x200/00FFFF/1a1a2e?text=Maqueta+E-commerce"
+            ];
+            // La IA también debería mencionar que ha generado sugerencias visuales
+            // aiText += "\n\nTambién te he preparado algunas sugerencias visuales de estructura."; // Podríamos añadir esto programáticamente o dejar que la IA lo haga en su respuesta.
+        }
+        // ************************************************************
+
         return {
             statusCode: 200,
             headers: {
                 'Content-Type': 'application/json',
-                // Permite peticiones desde cualquier origen (CORS) - considera restringir esto en producción
-                'Access-Control-Allow-Origin': '*', 
+                'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'POST, OPTIONS',
                 'Access-Control-Allow-Headers': 'Content-Type',
             },
@@ -66,6 +156,12 @@ exports.handler = async (event, context) => {
 
     } catch (error) {
         console.error("Error en la función de Netlify:", error);
+        let errorMessage = `Error procesando la solicitud en el servidor: ${error.message}`;
+        if (error.name === "GoogleGenerativeAIFetchError" && error.status === 404) {
+            errorMessage = `Error de la API de Google Gemini: Modelo no encontrado o no compatible. Verifica que "gemini-2.0-flash" esté disponible para tu clave API o que las APIs estén habilitadas en Google Cloud Console. Detalles: ${error.message}`;
+        } else if (error.status === 403 || error.status === 401) {
+            errorMessage = `Error de autenticación/permisos con la API de Google. Verifica que la clave API sea correcta y que las APIs estén habilitadas en Google Cloud Console. Detalles: ${error.message}`;
+        }
         return {
             statusCode: 500,
             headers: {
@@ -74,7 +170,7 @@ exports.handler = async (event, context) => {
                 'Access-Control-Allow-Methods': 'POST, OPTIONS',
                 'Access-Control-Allow-Headers': 'Content-Type',
             },
-            body: JSON.stringify({ message: `Error procesando la solicitud en el servidor: ${error.message}` }),
+            body: JSON.stringify({ message: errorMessage }),
         };
     }
 };
