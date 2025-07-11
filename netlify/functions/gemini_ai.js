@@ -3,12 +3,6 @@
 // Importar la librería de Google Generative AI para Node.js
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// ** TEMPORALMENTE INSEGURO PARA DEPURACIÓN **
-// La API Key NO DEBE leerse de process.env.GEMINI_API_KEY en este momento,
-// ya que estamos forzando que venga del frontend para que funcione.
-// ESTA PARTE SERÁ CORREGIDA EN EL PASO DE SEGURIDAD FINAL.
-// const API_KEY = process.env.GEMINI_API_KEY; // DESHABILITAMOS ESTA LÍNEA POR AHORA
-
 // La función principal que Netlify ejecutará
 exports.handler = async (event) => {
     // Solo responde a peticiones POST
@@ -20,8 +14,8 @@ exports.handler = async (event) => {
     }
 
     try {
-        // **TEMPORALMENTE SEGUIMOS RECIBIENDO LA API KEY DEL FRONTEND**
-        const { message, apiKey } = JSON.parse(event.body); 
+        // Recibimos el mensaje, la API Key, Y EL HISTORIAL desde el frontend
+        const { message, apiKey, history } = JSON.parse(event.body); 
 
         if (!apiKey || !message) {
             return {
@@ -31,22 +25,21 @@ exports.handler = async (event) => {
         }
 
         // Inicializa GoogleGenerativeAI con la clave API recibida del frontend (TEMPORAL)
-        const genAI = new GoogleGenerativeAI(apiKey, { // Usamos 'apiKey' directamente
+        const genAI = new GoogleGenerativeAI(apiKey, {
             apiVersion: 'v1', // Mantenemos v1
         });
 
-        // Seleccionar el modelo "gemini-2.0-flash" (el que te funcionó)
         const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
         // ************************************************************
-        // ** PROMPT ALTAMENTE DETALLADO Y ESPECÍFICO - MÁXIMA PRIORIDAD A LA ACCIÓN **
+        // ** PROMPT ALTAMENTE DETALLADO Y CONCISO - MÁXIMA PRIORIDAD A LA ACCIÓN **
         // ************************************************************
-        const chatContent = [
-            {
-                role: "user",
-                parts: [{ text: `
-## Rol y Personalidad: WebCrafter AI - Tu Arquitecto de Software Senior y Experto en Ingeniería de Prompts
-Eres WebCrafter AI, un arquitecto de software senior y un experto en ingeniería de prompts. Tu tarea es guiar al usuario a través del proceso de diseño, planificación y programación de módulos de software y proyectos web completos. Tu objetivo es asegurar que el código generado sea de **alta calidad, seguro, mantenible** y se alinee con las **mejores prácticas de la industria**.
+        // Este es el prompt principal que define el rol y las directrices
+        const systemPrompt = {
+            role: "user",
+            parts: [{ text: `
+## Rol: WebCrafter AI - Tu Arquitecto de Software Senior y Experto en Ingeniería de Prompts
+Eres WebCrafter AI, un arquitecto de software senior y un experto en ingeniería de prompts. Tu tarea es guiar al usuario en el diseño y la programación de módulos de software y proyectos web completos. Tu objetivo es asegurar que el código generado sea de **alta calidad, seguro, mantenible** y se alinee con las **mejores prácticas de la industria**.
 
 ---
 
@@ -98,20 +91,27 @@ Eres WebCrafter AI, un arquitecto de software senior y un experto en ingeniería
 **Mi nombre es WebCrafter AI. Estoy aquí para ser tu guía experto en desarrollo web.**
 
 Ahora, guíame con tu proyecto.`
-                }],
-            },
-            {
-                role: "model",
-                // La respuesta inicial de la IA al nuevo prompt - más concisa
-                parts: [{ text: "¡Entendido! Soy WebCrafter AI, tu arquitecto y programador experto. Dime tu `DESAFÍO` (la tarea específica de codificación que quieres) para que te dé el plan o el código. **Seré conciso y directo.**" }]
-            },
-            {
-                role: "user",
-                parts: [{ text: message }]
-            }
+            }], // Cierre del primer elemento del array chatContent (role: "user")
+        }; // Cierre del objeto del primer elemento del array chatContent
+
+        // La respuesta inicial fija del modelo a un nuevo chat.
+        const modelInitialResponse = {
+            role: "model",
+            parts: [{ text: "¡Entendido! Soy WebCrafter AI, tu arquitecto y programador experto. Dime tu `DESAFÍO` (la tarea específica de codificación que quieres) para que te dé el plan o el código. **Seré conciso y directo.**" }]
+        };
+
+        // Construir el 'contents' array para la API de Gemini
+        // Si el historial está vacío, empezamos con el systemPrompt y la modelInitialResponse
+        // Luego, se añade el historial de la conversación (user/model turns)
+        // Finalmente, el mensaje actual del usuario
+        const contents = [
+            systemPrompt,
+            modelInitialResponse,
+            ...history, // Aquí se inserta el historial de la conversación
+            { role: "user", parts: [{ text: message }] } // El mensaje actual del usuario
         ];
 
-        const result = await model.generateContent({ contents: chatContent });
+        const result = await model.generateContent({ contents: contents });
         const response = await result.response;
         const aiText = response.text();
 

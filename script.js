@@ -90,17 +90,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (confirm(`¿Estás seguro de que quieres eliminar el proyecto "${project.name}"?`)) {
                     delete projects[id];
                     // Si el proyecto actual es el que se eliminó, cambiamos a "current" o al primer proyecto disponible
-                    if (id === currentProjectId) {
-                        const projectIds = Object.keys(projects);
-                        if (projectIds.length > 0) {
-                            currentProjectId = projectIds[0];
-                        } else {
-                            // Si no hay proyectos, crear uno nuevo por defecto
-                            projectIdCounter++;
-                            const defaultId = `project-${projectIdCounter}`;
-                            projects[defaultId] = { name: 'Proyecto Nuevo', messages: [{ text: "¡Hola! Soy WebCrafter AI, ¿en qué puedo ayudarte con tu nuevo proyecto?", sender: "ai" }], imageUrls: [] };
-                            currentProjectId = defaultId;
-                        }
+                    if (Object.keys(projects).length > 0) {
+                        currentProjectId = Object.keys(projects)[0];
+                    } else {
+                        // Si no hay proyectos, crear uno nuevo por defecto
+                        projectIdCounter++;
+                        const defaultId = `project-${projectIdCounter}`;
+                        projects[defaultId] = { name: 'Proyecto Nuevo', messages: [{ text: "¡Hola! Soy WebCrafter AI, ¿en qué puedo ayudarte con tu nuevo proyecto?", sender: "ai" }], imageUrls: [] };
+                        currentProjectId = defaultId;
                     }
                     renderProjectList();
                     renderMessages(currentProjectId);
@@ -153,7 +150,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Event listeners para los botones de autenticación (simulados)
     loginButton.addEventListener('click', () => {
-        // Reemplazar alert con un modal personalizado si es para producción
         alert('Simulando inicio de sesión...'); 
         isLoggedIn = true;
         updateAuthButtons();
@@ -162,7 +158,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     registerButton.addEventListener('click', () => {
-        // Reemplazar alert con un modal personalizado si es para producción
         alert('Simulando registro...');
         isLoggedIn = true;
         updateAuthButtons();
@@ -171,7 +166,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     userProfile.addEventListener('click', () => {
-        // Reemplazar alert con un modal personalizado si es para producción
         alert('Simulando menú de perfil. ¿Cerrar sesión?');
         isLoggedIn = false;
         updateAuthButtons();
@@ -181,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Toggle para el Sidebar
     hamburgerMenuButton.addEventListener('click', (event) => {
-        event.stopPropagation(); // Evitar que el clic en el botón cierre inmediatamente el sidebar
+        event.stopPropagation();
         sidebar.classList.toggle('visible');
     });
 
@@ -190,7 +184,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (sidebar.classList.contains('visible')) {
             const isClickInsideSidebar = sidebar.contains(event.target);
             const isClickOnHamburger = hamburgerMenuButton.contains(event.target);
-            // No se necesita `isClickInsideChatColumn` aquí, ya que el sidebar es un modal de menú
             if (!isClickInsideSidebar && !isClickOnHamburger) {
                 sidebar.classList.remove('visible');
             }
@@ -224,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
         messageDiv.classList.add('message', `${sender}-message`);
         messageDiv.innerHTML = `<p>${text}</p>`;
         messagesContainer.appendChild(messageDiv);
-        messagesContainer.scrollTop = messagesContainer.scrollTop; // Mantener el scroll al final
+        messagesContainer.scrollTop = messagesContainer.scrollHeight; // Mantener el scroll al final
 
         if (save) {
             projects[currentProjectId].messages.push({ text, sender });
@@ -253,7 +246,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 imageOptionDiv.addEventListener('click', () => {
                     const selectedId = imageOptionDiv.dataset.structureId;
-                    // Reemplazar alert con un modal personalizado si es para producción
                     alert(`¡Has seleccionado la Estructura Opción ${selectedId}!`);
                     addMessage(`He seleccionado la Estructura Opción ${selectedId}. ¡Me encanta!`, 'user');
                     structureModal.classList.add('hidden');
@@ -271,13 +263,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ***************************************************************
-    // ** INICIO DE LA FUNCIÓN ACTUALIZADA A sendMessageToAI **
+    // ** INICIO DE LA FUNCIÓN sendMessageToAI CON HISTORIAL **
     // ***************************************************************
     async function sendMessageToAI(message) {
         addMessage(message, 'user');
-        userInput.value = ''; // Limpiar el input inmediatamente
+        userInput.value = '';
 
-        // Mostrar un mensaje de "escribiendo" o un indicador de carga
         const loadingMessageDiv = document.createElement('div');
         loadingMessageDiv.classList.add('message', 'ai-message', 'loading-message');
         loadingMessageDiv.innerHTML = `<p>WebCrafter AI está pensando...</p>`;
@@ -285,56 +276,69 @@ document.addEventListener('DOMContentLoaded', () => {
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
         try {
-            // La URL de tu Netlify Function. Usamos /api/ para la redirección configurada en netlify.toml
-            // IMPORTANTE: Para desarrollo local, necesitas usar `netlify dev` en tu terminal.
-            // Si estás usando un servidor local simple (como Live Server), esta ruta no funcionará
-            // porque el servidor local no sabe cómo manejar las funciones de Netlify.
             const NETLIFY_FUNCTION_URL = '/api/gemini_ai'; 
+            const GEMINI_API_KEY = 'AIzaSyDA5poq8otS3VKwaNivOG0hoDyygsFS0Jo'; // Tu clave API
 
-            // La clave API de Gemini proporcionada por el usuario
-            const GEMINI_API_KEY = 'AIzaSyDA5poq8otS3VKwaNivOG0hoDyygsFS0Jo'; // **AQUÍ SE USA LA CLAVE API**
+            // **NUEVO: Recopilar el historial de la conversación**
+            const conversationHistory = [];
+            messagesContainer.querySelectorAll('.message').forEach(msgDiv => {
+                const text = msgDiv.querySelector('p').textContent;
+                // Excluir el mensaje de carga y el mensaje inicial de bienvenida para evitar ruido.
+                if (msgDiv.classList.contains('user-message')) {
+                    conversationHistory.push({ role: 'user', parts: [{ text: text }] });
+                } else if (msgDiv.classList.contains('ai-message') && !msgDiv.classList.contains('loading-message')) {
+                    conversationHistory.push({ role: 'model', parts: [{ text: text }] });
+                }
+            });
 
+            // El primer mensaje de bienvenida de la IA no debe ir en el historial a la API si es fijo
+            // Si el historial es vacío o el primer mensaje es la bienvenida estándar, lo ignoramos para la API.
+            let cleanedHistory = [];
+            if (conversationHistory.length > 0) {
+                if (conversationHistory[0].role === 'model' && conversationHistory[0].parts[0].text.includes("¡Hola! Soy WebCrafter AI, tu guía experto")) {
+                    cleanedHistory = conversationHistory.slice(1); // Ignorar el primer mensaje de bienvenida
+                } else {
+                    cleanedHistory = conversationHistory;
+                }
+            }
+            
             const response = await fetch(NETLIFY_FUNCTION_URL, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ 
-                    message: message,
-                    apiKey: GEMINI_API_KEY // Envía la clave API junto con el mensaje
-                }) 
+                body: JSON.stringify({
+                    message: message, // El mensaje actual del usuario
+                    apiKey: GEMINI_API_KEY, // Tu clave API
+                    history: cleanedHistory // **Enviamos el historial**
+                })
             });
 
             if (!response.ok) {
-                // Leer el mensaje de error del cuerpo de la respuesta si está disponible
                 const errorBody = await response.json().catch(() => ({ message: 'Unknown error' }));
                 throw new Error(`Error HTTP: ${response.status} - ${errorBody.message || 'Server error'}`);
             }
 
             const data = await response.json();
 
-            // Eliminar el mensaje de carga
             loadingMessageDiv.remove();
-
-            // Usar la respuesta real de la IA
             addMessage(data.aiText, 'ai');
 
-            // Por ahora, imagesUrls estará vacío o null, pero lo tendremos listo para el siguiente paso
             if (data.imageUrls && data.imageUrls.length > 0) {
                 addImageSuggestions(data.imageUrls);
             } else {
-                structureModal.classList.add('hidden'); // Ocultar el modal si no hay imágenes
+                structureModal.classList.add('hidden');
             }
 
         } catch (error) {
             console.error("Error al comunicarse con la IA:", error);
-            loadingMessageDiv.remove(); // Asegurarse de quitar el mensaje de carga
+            loadingMessageDiv.remove();
             addMessage(`Lo siento, hubo un error al procesar tu solicitud: ${error.message}. Por favor, inténtalo de nuevo.`, 'ai');
-            structureModal.classList.add('hidden'); // Asegurarse de ocultar el modal si hubo un error
+            structureModal.classList.add('hidden');
         }
     }
     // ***************************************************************
-    // ** FIN DE LA FUNCIÓN ACTUALIZADA A sendMessageToAI **
+    // ** FIN DE LA FUNCIÓN sendMessageToAI **
     // ***************************************************************
 
 
@@ -342,7 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
     sendButton.addEventListener('click', () => {
         const message = userInput.value.trim();
         if (message) {
-            sendMessageToAI(message); // Cambia de sendMessageToAutoma a sendMessageToAI
+            sendMessageToAI(message);
         }
     });
 
