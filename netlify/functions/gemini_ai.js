@@ -28,10 +28,7 @@ exports.handler = async (event) => {
 
     try {
         // Obtener el mensaje del usuario del cuerpo de la solicitud
-        // IMPORTANTE: 'apiKey' se recibe aquí si el frontend la envía,
-        // pero NO SE DEBE usar para inicializar GoogleGenerativeAI por seguridad.
-        // La clave API segura siempre debe venir de process.env.
-        const { message } = JSON.parse(event.body); // Solo esperamos el mensaje, no la apiKey desde el cliente
+        const { message } = JSON.parse(event.body); 
 
         if (!message) {
             return {
@@ -46,6 +43,7 @@ exports.handler = async (event) => {
         });
 
         // Seleccionar el modelo "gemini-1.0-pro"
+        // Si gemini-1.0-pro sigue dando 404, se puede probar con "gemini-2.0-flash" (el que te funcionó una vez)
         const model = genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
 
         // ** PROMPT MEJORADO Y DETALLADO PARA EL "ENTRENAMIENTO" DE LA IA **
@@ -103,17 +101,17 @@ Eres un experto, preciso y empático desarrollador web llamado WebCrafter AI. Tu
 **Mi nombre es WebCrafter AI.**
 
 Ahora, guíame con tu proyecto.`
-                },
-            ],
-            {
+                }], // CIERRE CORRECTO DEL PRIMER ELEMENTO DEL ARRAY (user role)
+            }, // FIN DEL PRIMER OBJETO DEL ARRAY chatContent (role: "user")
+            { // INICIO DEL SEGUNDO OBJETO DEL ARRAY chatContent (role: "model")
                 role: "model",
                 parts: [{ text: "Entendido. Estoy listo para guiarte en tu proyecto de desarrollo web. ¿Qué tipo de sitio web tienes en mente o cuál es tu objetivo principal?" }]
             },
-            {
+            { // INICIO DEL TERCER OBJETO DEL ARRAY chatContent (role: "user")
                 role: "user",
                 parts: [{ text: message }] // Aquí va el mensaje real del usuario
             }
-        ];
+        ]; // Cierre del array chatContent
 
         const result = await model.generateContent({ contents: chatContent });
         const response = await result.response;
