@@ -3,9 +3,11 @@
 // Importar la librería de Google Generative AI para Node.js
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// La API Key debe leerse de las variables de entorno de Netlify.
-// ¡NUNCA la expongas directamente en el frontend o en este archivo!
-const API_KEY = process.env.GEMINI_API_KEY; 
+// ** TEMPORALMENTE INSEGURO PARA DEPURACIÓN **
+// La API Key NO DEBE leerse de process.env.GEMINI_API_KEY en este momento,
+// ya que estamos forzando que venga del frontend para que funcione.
+// ESTA PARTE SERÁ CORREGIDA EN EL PASO DE SEGURIDAD FINAL.
+// const API_KEY = process.env.GEMINI_API_KEY; // DESHABILITAMOS ESTA LÍNEA POR AHORA
 
 // La función principal que Netlify ejecutará
 exports.handler = async (event) => {
@@ -17,34 +19,24 @@ exports.handler = async (event) => {
         };
     }
 
-    // Asegúrate de que la clave API esté configurada en Netlify
-    if (!API_KEY) {
-        console.error("Error: GEMINI_API_KEY no está configurada como variable de entorno de Netlify.");
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ message: 'Server configuration error: API Key missing.' }),
-        };
-    }
-
     try {
-        // Obtener el mensaje del usuario del cuerpo de la solicitud
-        const { message } = JSON.parse(event.body); 
+        // **TEMPORALMENTE SEGUIMOS RECIBIENDO LA API KEY DEL FRONTEND**
+        const { message, apiKey } = JSON.parse(event.body); 
 
-        if (!message) {
+        if (!apiKey || !message) {
             return {
                 statusCode: 400,
-                body: JSON.stringify({ message: 'Missing message in request body' }),
+                body: JSON.stringify({ message: 'Missing API Key or message in request body' }),
             };
         }
 
-        // Inicializa GoogleGenerativeAI con la clave API SEGURA del entorno de Netlify
-        const genAI = new GoogleGenerativeAI(API_KEY, {
-            apiVersion: 'v1', // Forzar la versión v1 de la API, que es más estable
+        // Inicializa GoogleGenerativeAI con la clave API recibida del frontend (TEMPORAL)
+        const genAI = new GoogleGenerativeAI(apiKey, { // Usamos 'apiKey' directamente
+            apiVersion: 'v1', // Mantenemos v1, pero el modelo es clave
         });
 
-        // Seleccionar el modelo "gemini-1.0-pro"
-        // Si gemini-1.0-pro sigue dando 404, se puede probar con "gemini-2.0-flash" (el que te funcionó una vez)
-        const model = genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
+        // CAMBIO CLAVE: Volvemos a un modelo que te funcionó, o uno más generalista
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }); // Usamos gemini-2.0-flash
 
         // ** PROMPT MEJORADO Y DETALLADO PARA EL "ENTRENAMIENTO" DE LA IA **
         const chatContent = [
@@ -101,13 +93,13 @@ Eres un experto, preciso y empático desarrollador web llamado WebCrafter AI. Tu
 **Mi nombre es WebCrafter AI.**
 
 Ahora, guíame con tu proyecto.`
-                }], // CIERRE CORRECTO DEL PRIMER ELEMENTO DEL ARRAY (user role)
-            }, // FIN DEL PRIMER OBJETO DEL ARRAY chatContent (role: "user")
-            { // INICIO DEL SEGUNDO OBJETO DEL ARRAY chatContent (role: "model")
+                }], // Cierre del primer elemento del array chatContent (role: "user")
+            }, // Cierre del objeto role: "user"
+            { // Inicio del segundo elemento del array chatContent (role: "model")
                 role: "model",
                 parts: [{ text: "Entendido. Estoy listo para guiarte en tu proyecto de desarrollo web. ¿Qué tipo de sitio web tienes en mente o cuál es tu objetivo principal?" }]
             },
-            { // INICIO DEL TERCER OBJETO DEL ARRAY chatContent (role: "user")
+            { // Inicio del tercer elemento del array chatContent (role: "user")
                 role: "user",
                 parts: [{ text: message }] // Aquí va el mensaje real del usuario
             }
@@ -144,10 +136,12 @@ Ahora, guíame con tu proyecto.`
     } catch (error) {
         console.error("Error en la función de Netlify:", error);
         let errorMessage = `Error procesando la solicitud en el servidor: ${error.message}`;
-        if (error.name === "GoogleGenerativeAIFetchError" && error.status === 404) {
-            errorMessage = `Error de la API de Google Gemini: Modelo no encontrado o no compatible. Verifica que "gemini-1.0-pro" esté disponible para tu clave API o que las APIs estén habilitadas en Google Cloud Console. Detalles: ${error.message}`;
-        } else if (error.status === 403 || error.status === 401) {
-            errorMessage = `Error de autenticación/permisos con la API de Google. Verifica que la clave API sea correcta y que las APIs estén habilitadas en Google Cloud Console. Detalles: ${error.message}`;
+        if (error.name === "GoogleGenerativeAIFetchError") {
+            if (error.status === 404) {
+                errorMessage = `Error de la API de Google Gemini (404 Not Found): El modelo no se encontró o no está disponible. Verifica el nombre del modelo ("gemini-2.0-flash") y que las APIs estén habilitadas en Google Cloud Console para tu clave API. Detalles: ${error.message}`;
+            } else if (error.status === 403 || error.status === 401) {
+                errorMessage = `Error de autenticación/permisos con la API de Google (401/403): La clave API es inválida o no tiene los permisos necesarios. Verifica tu clave API y las APIs habilitadas en Google Cloud Console. Detalles: ${error.message}`;
+            }
         }
         return {
             statusCode: 500,
