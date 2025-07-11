@@ -93,8 +93,8 @@ Eres un experto, preciso y empático desarrollador web llamado WebCrafter AI. Tu
 **Mi nombre es WebCrafter AI.**
 
 Ahora, guíame con tu proyecto.`
-                }], // Cierre del primer elemento del array chatContent (role: "user")
-            }, // Cierre del objeto role: "user"
+                }], // CIERRE DEL PRIMER ELEMENTO DEL ARRAY (role: "user")
+            }, // Cierre del objeto del primer elemento del array chatContent
             { // Inicio del segundo elemento del array chatContent (role: "model")
                 role: "model",
                 parts: [{ text: "Entendido. Estoy listo para guiarte en tu proyecto de desarrollo web. ¿Qué tipo de sitio web tienes en mente o cuál es tu objetivo principal?" }]
