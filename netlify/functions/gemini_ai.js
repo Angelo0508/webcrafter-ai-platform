@@ -1,17 +1,13 @@
 // netlify/functions/gemini_ai.js
 
+// Importar la librería de Google Generative AI para Node.js
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// **IMPORTANTE: La API Key NUNCA debe venir directamente del frontend en producción.**
-// Debe leerse de las variables de entorno de Netlify (process.env.GEMINI_API_KEY).
-// En el siguiente paso, eliminaremos el envío de la clave desde el frontend por seguridad.
+// La API Key debe leerse de las variables de entorno de Netlify.
+// ¡NUNCA la expongas directamente en el frontend o en este archivo!
 const API_KEY = process.env.GEMINI_API_KEY; 
 
-// Inicializar GoogleGenerativeAI con la clave API
-const genAI = new GoogleGenerativeAI(API_KEY, {
-    apiVersion: 'v1', // Mantén esta línea para usar la versión estable v1
-});
-
+// La función principal que Netlify ejecutará
 exports.handler = async (event) => {
     // Solo responde a peticiones POST
     if (event.httpMethod !== 'POST') {
@@ -21,9 +17,9 @@ exports.handler = async (event) => {
         };
     }
 
-    // Asegúrate de que la clave API de entorno esté configurada en Netlify
+    // Asegúrate de que la clave API esté configurada en Netlify
     if (!API_KEY) {
-        console.error("Error: GEMINI_API_KEY no está configurada como variable de entorno.");
+        console.error("Error: GEMINI_API_KEY no está configurada como variable de entorno de Netlify.");
         return {
             statusCode: 500,
             body: JSON.stringify({ message: 'Server configuration error: API Key missing.' }),
@@ -32,9 +28,10 @@ exports.handler = async (event) => {
 
     try {
         // Obtener el mensaje del usuario del cuerpo de la solicitud
-        // IMPORTANTE: 'apiKey' se recibe aquí temporalmente para que funcione,
-        // pero debe eliminarse del frontend por seguridad.
-        const { message, apiKey: tempApiKeyFromFrontend } = JSON.parse(event.body); 
+        // IMPORTANTE: 'apiKey' se recibe aquí si el frontend la envía,
+        // pero NO SE DEBE usar para inicializar GoogleGenerativeAI por seguridad.
+        // La clave API segura siempre debe venir de process.env.
+        const { message } = JSON.parse(event.body); // Solo esperamos el mensaje, no la apiKey desde el cliente
 
         if (!message) {
             return {
@@ -43,11 +40,15 @@ exports.handler = async (event) => {
             };
         }
 
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        // Inicializa GoogleGenerativeAI con la clave API SEGURA del entorno de Netlify
+        const genAI = new GoogleGenerativeAI(API_KEY, {
+            apiVersion: 'v1', // Forzar la versión v1 de la API, que es más estable
+        });
 
-        // ************************************************************
+        // Seleccionar el modelo "gemini-1.0-pro"
+        const model = genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
+
         // ** PROMPT MEJORADO Y DETALLADO PARA EL "ENTRENAMIENTO" DE LA IA **
-        // ************************************************************
         const chatContent = [
             {
                 role: "user",
@@ -83,8 +84,6 @@ Eres un experto, preciso y empático desarrollador web llamado WebCrafter AI. Tu
 -   **Documentación:** Explicar claramente el código y los conceptos.
 -   **Resolución de Problemas Complejos:** Desglosar problemas complejos en subproblemas y sugerir múltiples enfoques.
 
----
-
 ## Atributos y Principios Clave:
 -   **Nacido Desarrollador Web:** Profundo conocimiento práctico de desarrollo web.
 -   **Preciso y Concreto:** Respuestas directas y específicas.
@@ -94,8 +93,6 @@ Eres un experto, preciso y empático desarrollador web llamado WebCrafter AI. Tu
 -   **Manejo Robusto de Errores:** Todos los ejemplos de código deben incluirlo.
 -   **Aprendizaje Continuo y Adaptabilidad:** Mantenerse actualizado y sugerir recursos.
 -   **Empoderamiento del Usuario:** Ayudar a los usuarios a entender el "porqué" detrás de las soluciones.
-
----
 
 ## Directrices de Interacción:
 -   **Código Completo y Funcional:** Proporcionar código ejecutable cuando sea factible.
@@ -122,26 +119,18 @@ Ahora, guíame con tu proyecto.`
         const response = await result.response;
         const aiText = response.text();
 
-        // ************************************************************
-        // ** Lógica para la generación/sugerencia de imágenes **
-        // Actualmente, esto es un placeholder. La verdadera implementación
-        // de la generación de imágenes con Vertex AI (Imagen) sería aquí.
-        // Por ahora, si el prompt del usuario sugiere pedir imágenes,
-        // la IA puede responder con URLs de placeholder.
+        // Lógica para la generación/sugerencia de imágenes (placeholder por ahora)
         let imageUrls = [];
         const lowerCaseMessage = message.toLowerCase();
 
-        // Ejemplos muy básicos de detección para sugerir imágenes (esto mejoraría con IA)
+        // Si el usuario pregunta por "estructura", "diseño", "layout", etc., devolver placeholders.
         if (lowerCaseMessage.includes("estructura") || lowerCaseMessage.includes("diseño") || lowerCaseMessage.includes("layout")) {
             imageUrls = [
                 "https://via.placeholder.com/280x200/00FFFF/1a1a2e?text=Maqueta+General",
                 "https://via.placeholder.com/280x200/00FFFF/1a1a2e?text=Maqueta+Minimalista",
                 "https://via.placeholder.com/280x200/00FFFF/1a1a2e?text=Maqueta+E-commerce"
             ];
-            // La IA también debería mencionar que ha generado sugerencias visuales
-            // aiText += "\n\nTambién te he preparado algunas sugerencias visuales de estructura."; // Podríamos añadir esto programáticamente o dejar que la IA lo haga en su respuesta.
         }
-        // ************************************************************
 
         return {
             statusCode: 200,
@@ -158,7 +147,7 @@ Ahora, guíame con tu proyecto.`
         console.error("Error en la función de Netlify:", error);
         let errorMessage = `Error procesando la solicitud en el servidor: ${error.message}`;
         if (error.name === "GoogleGenerativeAIFetchError" && error.status === 404) {
-            errorMessage = `Error de la API de Google Gemini: Modelo no encontrado o no compatible. Verifica que "gemini-2.0-flash" esté disponible para tu clave API o que las APIs estén habilitadas en Google Cloud Console. Detalles: ${error.message}`;
+            errorMessage = `Error de la API de Google Gemini: Modelo no encontrado o no compatible. Verifica que "gemini-1.0-pro" esté disponible para tu clave API o que las APIs estén habilitadas en Google Cloud Console. Detalles: ${error.message}`;
         } else if (error.status === 403 || error.status === 401) {
             errorMessage = `Error de autenticación/permisos con la API de Google. Verifica que la clave API sea correcta y que las APIs estén habilitadas en Google Cloud Console. Detalles: ${error.message}`;
         }
